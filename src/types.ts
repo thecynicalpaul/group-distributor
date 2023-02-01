@@ -6,3 +6,5 @@ export interface UserRecord {
   department: string;
   level: string;
 }
+
+export type Group = UserRecord[];

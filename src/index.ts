@@ -1,9 +1,9 @@
 import { Command, Option } from "@commander-js/extra-typings";
 import { DEFAULT_GROUP_SIZE, DEFAULT_TOPIC_COUNT } from "./constants";
-import { asyncLoadCsvFileData } from "./file";
+import { asyncLoadCsvFileData, asyncWriteToCsvFile } from "./file";
 import { generateTopicUserGroups } from "./group";
 
-import type { UserRecord } from "./types";
+import type { Group } from "./types";
 
 const program = new Command()
   .description("Create groups of n participants from a CSV file for multiple sessions.")
@@ -51,7 +51,7 @@ const main = async () => {
   const userList = await asyncLoadCsvFileData(inputFilePath);
 
   // Get the main procedure going
-  const topicList: UserRecord[][][] = [];
+  const topicList: Group[][] = [];
   for (let i = 0; i < topicCount; i += 1) {
     const groupList = generateTopicUserGroups(userList, {
       groupSize: groupSize,
@@ -72,6 +72,8 @@ const main = async () => {
         )
       ));
   }
+
+  await asyncWriteToCsvFile(userList, topicList, outputFilePath);
 };
 
 // =============================================================================
