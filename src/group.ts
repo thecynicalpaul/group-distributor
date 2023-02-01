@@ -55,6 +55,8 @@ const distributeUsers = (
   }
 
   for (const user of userList) {
+    let hasGroup = false;
+
     for (let i = 0; i < groupList.length; i += 1) {
       const group = groupList[i];
 
@@ -67,6 +69,7 @@ const distributeUsers = (
       // TODO: figured out a way to filter users that don't match arg criteria
       if (!isGroupFull && !isOverlapping) {
         group.push(user);
+        hasGroup = true;
         // If the currently iterated user added to the group, stop cycling
         // through the groups.
         // Feels illegal, but building an escape hatch around this single line
@@ -74,11 +77,20 @@ const distributeUsers = (
         break;
       }
 
-      // Naiively cleanup any left out users into the last group. Since users
+
+    }
+
+    if (!hasGroup) {
+      // Naiively cleanup any left out users into the last free group. Since users
       // are shuffled every iteration, the chances of this group being
       // suboptimal are arbitrarily less.
-      if (!isGroupFull && i === (groupList.length - 1)) {
-        group.push(user);
+      for (let i = groupList.length - 1; i >= 0; i -= 1) {
+        const group = groupList[i];
+        const isGroupFull = group.length >= DEFAULT_GROUP_SIZE;
+        if (!isGroupFull) {
+          group.push(user);
+          break;
+        }
       }
     }
   }
