@@ -1,4 +1,3 @@
-import { DEFAULT_GROUP_SIZE } from "./constants";
 import { UserRecord } from "./types";
 
 type Group = UserRecord[];
@@ -11,6 +10,7 @@ type LevelCache = Map<Group, Set<string>>;
 // =============================================================================
 
 interface GenerateTopicUserGroupsOptions {
+  groupSize: number;
   /** Set this if we want to prevent overlap. */
   prevGroupList?: Group[];
   depOverlap?: "max" | "min";
@@ -19,7 +19,7 @@ interface GenerateTopicUserGroupsOptions {
 
 export const generateTopicUserGroups = (
   userList: UserRecord[],
-  options: GenerateTopicUserGroupsOptions = {}
+  options: GenerateTopicUserGroupsOptions
 ) => {
   const shuffledUserList = shuffleUsers(userList);
   return distributeUsers(shuffledUserList, options);
@@ -47,13 +47,14 @@ const shuffleUsers = (userList: UserRecord[]) => {
 const distributeUsers = (
   userList: UserRecord[],
   {
+    groupSize,
     prevGroupList = [],
     depOverlap,
     levelOverlap
   }: GenerateTopicUserGroupsOptions
 ) => {
   // Populate the group list with empty groups to allow simpler travel.
-  const totalGroupCount = Math.ceil(userList.length / DEFAULT_GROUP_SIZE);
+  const totalGroupCount = Math.ceil(userList.length / groupSize);
   const groupList: Group[] =
     new Array(totalGroupCount).fill(null).map(_ => []);
 
@@ -70,7 +71,7 @@ const distributeUsers = (
 
       // Identify whether this group is the best fit for the user
       const isGroupFull =
-        group.length >= DEFAULT_GROUP_SIZE;
+        group.length >= groupSize;
       const isOverlapping =
         isTopicUserOverlapping(topicCache, group, user);
       const isDepMatch =
@@ -105,7 +106,7 @@ const distributeUsers = (
       // seems to not have much impact so far...
       for (let i = groupList.length - 1; i >= 0; i -= 1) {
         const group = groupList[i];
-        const isGroupFull = group.length >= DEFAULT_GROUP_SIZE;
+        const isGroupFull = group.length >= groupSize;
         // If the group isn't full, place the user there
         if (!isGroupFull) {
           group.push(user);
