@@ -1,0 +1,26 @@
+{
+  "name": "groups",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --experimental-modules --es-module-specifier-resolution=node ./build/index.js",
+    "start.dev": "npx nodemon",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "BY-NC-ND",
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "nodemon": "^2.0.20",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "@commander-js/extra-typings": "10.0.2",
+    "commander": "10.0.0",
+    "csv-parse": "5.3.4"
+  }
+}
