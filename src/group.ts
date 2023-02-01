@@ -21,8 +21,8 @@ export const generateTopicUserGroups = (
   userList: UserRecord[],
   options: GenerateTopicUserGroupsOptions = {}
 ) => {
-  // const shuffledUserList = shuffleUsers(userList);
-  return distributeUsers(userList, options);
+  const shuffledUserList = shuffleUsers(userList);
+  return distributeUsers(shuffledUserList, options);
 };
 
 // =============================================================================
@@ -38,6 +38,12 @@ const shuffleUsers = (userList: UserRecord[]) => {
   return [...userList].sort(_ => 0.5 - Math.random());
 };
 
+/**
+ * Core utility responsible for distributing users among the groups. Operates
+ * on the assumption that all overlap requirements are of equal weight.
+ * Greedily scans through each user allocating to the best fitting group, and if
+ * none found, then the closest non-full one.
+ */
 const distributeUsers = (
   userList: UserRecord[],
   {
@@ -46,10 +52,12 @@ const distributeUsers = (
     levelOverlap
   }: GenerateTopicUserGroupsOptions
 ) => {
+  // Populate the group list with empty groups to allow simpler travel.
   const totalGroupCount = Math.ceil(userList.length / DEFAULT_GROUP_SIZE);
   const groupList: Group[] =
     new Array(totalGroupCount).fill(null).map(_ => []);
 
+  // Prepare caches
   const topicCache = generateTopicCache(prevGroupList);
   const depCache: DepCache = new Map();
   const levelCache: LevelCache = new Map();
@@ -60,6 +68,7 @@ const distributeUsers = (
     for (let i = 0; i < groupList.length; i += 1) {
       const group = groupList[i];
 
+      // Identify whether this group is the best fit for the user
       const isGroupFull =
         group.length >= DEFAULT_GROUP_SIZE;
       const isOverlapping =
@@ -90,17 +99,16 @@ const distributeUsers = (
     }
 
     if (!hasGroup) {
-      // Naiively cleanup any left out users into the last free group. Since users
-      // are shuffled every iteration, the chances of this group being
-      // suboptimal are arbitrarily less.
+      // Naiively cleanup any left out users into the last free group.
+      // Since users are shuffled every iteration, the chances of this group
+      // being suboptimal are arbitrarily less. The direction of operation
+      // seems to not have much impact so far...
       for (let i = groupList.length - 1; i >= 0; i -= 1) {
         const group = groupList[i];
         const isGroupFull = group.length >= DEFAULT_GROUP_SIZE;
+        // If the group isn't full, place the user there
         if (!isGroupFull) {
           group.push(user);
-
-          depOverlap && addToGroupCache(depCache, group, user, "department");
-          levelOverlap && addToGroupCache(levelCache, group, user, "level");
 
           break;
         }
@@ -108,11 +116,14 @@ const distributeUsers = (
     }
   }
 
-  console.log(levelCache);
-
   return groupList;
 };
 
+/**
+ * Generate a cache of user distribution from the previous topic iteration.
+ * This is useful for preventing the same users from regrouping again, to the
+ * best of this algorithm's ability.
+ */
 const generateTopicCache = (groupList: Group[]) => {
   const topicCache: Map<UserRecord, Set<UserRecord>> = new Map();
   for (let i = 0; i < groupList.length; i += 1) {
@@ -120,6 +131,7 @@ const generateTopicCache = (groupList: Group[]) => {
 
     for (let j = 0; j < group.length; j += 1) {
       const user = group[j];
+      // Add all users of the group except itself.
       topicCache.set(user, new Set(group));
       topicCache.get(user)?.delete(user);
     }
@@ -128,6 +140,10 @@ const generateTopicCache = (groupList: Group[]) => {
   return topicCache;
 };
 
+/**
+ * Utility to determine whether the user was with any of the other users
+ * In the previous topic.
+ */
 const isTopicUserOverlapping = (
   topicCache: TopicCache,
   group: Group,
@@ -137,6 +153,10 @@ const isTopicUserOverlapping = (
   return group.some(groupUser => Boolean(userOverlap?.has(groupUser)));
 };
 
+/**
+ * Utility to determine whether the user is in the best group based on the
+ * configured department optimization.
+ */
 const isUserDepOptimized = (
   type: "min" | "max" | undefined,
   cache: DepCache,
@@ -146,6 +166,10 @@ const isUserDepOptimized = (
   return isGroupCacheOptimized(type, cache, group, user, "department");
 };
 
+/**
+ * Utility to determine whether the user is in the best group based on the
+ * configured level optimization.
+ */
 const isUserLevelOptimized = (
   type: "min" | "max" | undefined,
   cache: LevelCache,
@@ -155,7 +179,10 @@ const isUserLevelOptimized = (
   return isGroupCacheOptimized(type, cache, group, user, "level");
 };
 
-
+/**
+ * Helper carrying out cache validation for user fields, since the caches
+ * act identically. (for now)
+ */
 const isGroupCacheOptimized = (
   type: "min" | "max" | undefined,
   cache: LevelCache,
@@ -177,6 +204,10 @@ const isGroupCacheOptimized = (
   return !hasAlikes;
 };
 
+/**
+ * Update property-based cache with the user's value. Acts on the assumption
+ * that the passed cache shares its behavior with the others.
+ */
 const addToGroupCache = (
   cache: DepCache | LevelCache,
   group: Group,
@@ -185,8 +216,6 @@ const addToGroupCache = (
 ) => {
   const value = user[property];
   if (!value) { return; }
-
-  // console.log(user, value)
 
   cache.set(group, new Set(
     [...(cache.get(group) || []), value])
