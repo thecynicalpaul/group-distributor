@@ -15,7 +15,9 @@ const main = async () => {
 
   const topicList: UserRecord[][][] = [];
   for (let i = 0; i < DEFAULT_TOPIC_COUNT; i += 1) {
-    const groupList = generateTopicUserGroups(userList);
+    const groupList = generateTopicUserGroups(userList, {
+      prevGroupList: topicList[i - 1]
+    });
     topicList.push(groupList);
   }
 

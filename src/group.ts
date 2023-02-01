@@ -1,15 +1,23 @@
 import { DEFAULT_GROUP_SIZE } from "./constants";
 import { UserRecord } from "./types";
 
+type Group = UserRecord[];
+
 // =============================================================================
 // Public API
 // =============================================================================
 
+interface GenerateTopicUserGroupsOptions {
+  /** Set this if we want to prevent overlap. */
+  prevGroupList?: Group[];
+}
+
 export const generateTopicUserGroups = (
-  userList: any[]
+  userList: UserRecord[],
+  options: GenerateTopicUserGroupsOptions = {}
 ) => {
-  const shuffledUserList = shuffleUsers(userList);
-  return distributeUsers(shuffledUserList);
+  // const shuffledUserList = shuffleUsers(userList);
+  return distributeUsers(userList, options);
 };
 
 // =============================================================================
@@ -25,10 +33,26 @@ const shuffleUsers = (userList: UserRecord[]) => {
   return [...userList].sort(_ => 0.5 - Math.random());
 };
 
-const distributeUsers = (userList: UserRecord[]) => {
+const distributeUsers = (
+  userList: UserRecord[],
+  {
+    prevGroupList = []
+  }: GenerateTopicUserGroupsOptions
+) => {
   const totalGroupCount = Math.ceil(userList.length / DEFAULT_GROUP_SIZE);
-  const groupList: UserRecord[][] =
+  const groupList: Group[] =
     new Array(totalGroupCount).fill(null).map(_ => []);
+
+  const topicCache: Map<UserRecord, Set<UserRecord>> = new Map();
+  for (let i = 0; i < prevGroupList.length; i += 1) {
+    const group = prevGroupList[i];
+
+    for (let j = 0; j < group.length; j += 1) {
+      const user = group[j];
+      topicCache.set(user, new Set(group));
+      topicCache.get(user)?.delete(user);
+    }
+  }
 
   for (const user of userList) {
     for (let i = 0; i < groupList.length; i += 1) {
@@ -36,9 +60,25 @@ const distributeUsers = (userList: UserRecord[]) => {
 
       const isGroupFull = group.length >= DEFAULT_GROUP_SIZE;
 
-      if (!isGroupFull) {
+      const userOverlap = topicCache.get(user);
+      const isOverlapping =
+        group.some(groupUser => Boolean(userOverlap?.has(groupUser)));
+
+      // TODO: figured out a way to filter users that don't match arg criteria
+      if (!isGroupFull && !isOverlapping) {
         group.push(user);
+        // If the currently iterated user added to the group, stop cycling
+        // through the groups.
+        // Feels illegal, but building an escape hatch around this single line
+        // isn't worth our time.
         break;
+      }
+
+      // Naiively cleanup any left out users into the last group. Since users
+      // are shuffled every iteration, the chances of this group being
+      // suboptimal are arbitrarily less.
+      if (!isGroupFull && i === (groupList.length - 1)) {
+        group.push(user);
       }
     }
   }
