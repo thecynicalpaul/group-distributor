@@ -16,12 +16,14 @@ const main = async () => {
   const topicList: UserRecord[][][] = [];
   for (let i = 0; i < DEFAULT_TOPIC_COUNT; i += 1) {
     const groupList = generateTopicUserGroups(userList, {
-      prevGroupList: topicList[i - 1]
+      prevGroupList: topicList[i - 1],
+      depOverlap: "max",
+      levelOverlap: "max"
     });
     topicList.push(groupList);
   }
 
-  console.log(topicList.map(gl => gl.map(ul => ul.map(u => u.id))));
+  console.log(topicList.map(gl => gl.map(ul => ul.map(u => [u.id, u.department, u.level].toString()))));
 };
 
 // =============================================================================
