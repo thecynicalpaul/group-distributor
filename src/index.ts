@@ -7,6 +7,7 @@ import type { Group } from "./types";
 
 const program = new Command()
   .description("Create groups of n participants from a CSV file for multiple sessions.")
+  .name("npm start --")
   .showHelpAfterError()
   .argument("<input-file>", "location of the source CSV file")
   .argument("<output-file>", "location of the resulting CSV file")
